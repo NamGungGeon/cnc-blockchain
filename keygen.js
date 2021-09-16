@@ -1,12 +1,21 @@
+/**
+ * keygen.js can generate private-public key pair
+ * Public key pair is wallet addreess
+ *
+ * @Usage
+ * const {generateKey}= require('[path]/keygen');
+ * const [walletAddr, privateKey, key]= generateKey();
+ */
+
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 
 module.exports = {
-  generateKey: () => {
+  generateKey: (tag) => {
     const key = ec.genKeyPair();
     const publicKey = key.getPublic("hex");
     const privateKey = key.getPrivate("hex");
-    console.log("\nKey Pair is generated =====");
+    console.log("\nKey Pair is generated", tag ? `(${tag})` : "", "=====");
     console.log("Public Key:", publicKey);
     console.log("Private Key:", privateKey);
     console.log("===========================");
