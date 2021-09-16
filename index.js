@@ -8,7 +8,7 @@ const [myPublicKey, myPrivateKey, myKeyPair] = myKeyBundle;
 const testCoin = new Blockchain();
 
 //myPublicKey-> Jane에게 10코인만큼 전송
-const tx1 = new Transaction(myPublicKey, "Jane", 10);
+const tx1 = new Transaction(myPublicKey, "Jane", 0);
 //해당 트랜잭션에 소유자의 키페어로 사인한다
 tx1.signTransaction(myKeyPair);
 //사인된 트랜잭션을 블록체인에 제출

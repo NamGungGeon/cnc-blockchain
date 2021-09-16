@@ -106,6 +106,24 @@ Blockchain.prototype.addTransaction = function (transcation) {
   if (!transcation.isValid()) {
     throw "무효한 트랜잭션입니다";
   }
+  //pendingTranscation에 포함된 거래내역에 대해 잔액 변동률 계산
+  let balanceDeltaFromPendingTransactions = 0;
+  this.pendingTransactions.map((tx) => {
+    if (tx.fromAddr === transcation.fromAddr) {
+      balanceDeltaFromPendingTransactions -= tx.amount;
+    } else if (tx.toAddr === transcation.fromAddr) {
+      balanceDeltaFromPendingTransactions += tx.amount;
+    }
+  });
+  if (
+    this.getBalanceOfAddress(transcation.fromAddr) -
+      transcation.amount -
+      balanceDeltaFromPendingTransactions <
+    0
+  ) {
+    throw "잔액보다 더 많이 보낼 수 없습니다";
+  }
+  //can submit transcation to blockchain
   this.pendingTransactions.push(transcation);
 };
 //어떤 지갑 주소에 대해 잔액을 알고 싶을 떄 이 함수를 사용한다.
