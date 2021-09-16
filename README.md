@@ -43,7 +43,7 @@ Ok. you can see current blockchain state.
 
 ### Let's create keypair(yours) and create new transaction
 
-##### create keypair
+#### create keypair
 
 `create keypair geon`
 this command means 'create new keypair' and labeling it with geon.
