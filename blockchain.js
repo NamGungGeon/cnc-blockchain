@@ -2,14 +2,31 @@ const SHA256 = require("crypto-js/sha256");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 
+const wallets = require("./known-wallet");
+
 //Transaction은 보내는 지갑주소, 받을 지갑주소, 보낸 코인의 양을 포함하는 객체이다
-const Transaction = function (fromAddr, toAddr, amount) {
+const Transaction = function (fromAddr, toAddr, amount, data) {
   this.fromAddr = fromAddr;
   this.toAddr = toAddr;
   this.amount = amount;
+
+  //data에는 fromAddr이 업로드할 데이터(파일, 문자열 등)이 포함될 수 있다
+  //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
+  //정해진 수수료만큼을 포함시켜야 한다.
+  this.data = data;
+};
+Transaction.prototype.calcFee = function () {
+  if (!this.data) {
+    return 0;
+  }
+  const length = JSON.stringify(this.data).length;
+
+  return Math.ceil(length / 1024);
 };
 Transaction.prototype.calcHash = function () {
-  return SHA256(this.fromAddr + this.toAddr + this.amount).toString();
+  return SHA256(
+    this.fromAddr + this.toAddr + this.amount + this.data
+  ).toString();
 };
 Transaction.prototype.signTransaction = function (signKey) {
   if (signKey.getPublic("hex") !== this.fromAddr) {
@@ -99,33 +116,71 @@ Blockchain.prototype.minePendingTransactions = function (miningRewardAddress) {
     new Transaction(null, miningRewardAddress, this.miningRewrad),
   ];
 };
-Blockchain.prototype.addTransaction = function (transcation) {
-  if (!transcation.toAddr || !transcation.fromAddr) {
+Blockchain.prototype.addTransaction = function (transaction) {
+  if (!transaction.toAddr || !transaction.fromAddr) {
     throw "보내는 사람 정보와 받는 사람 정보가 모두 존재해야 합니다";
   }
-  if (!transcation.isValid()) {
+  if (!transaction.isValid()) {
     throw "무효한 트랜잭션입니다";
+  }
+  if (transaction.data && transaction.toAddr !== wallets.receptionist) {
+    throw "데이터를 포함시키기 위해서는 반드시 지정된 지갑에 수수료를 지불해야 합니다";
+  }
+  if (
+    transaction.data &&
+    this.getTranscationCountOfAddress(transaction.fromAddr) === 0
+  ) {
+    //처음 사용자일 경우 해당 트랜잭션에 대한 수수료 면제
+    //-> 해당 트랜잭션의 수수료만큼 코인 지급
+    this.pendingTransactions = [
+      ...this.pendingTransactions,
+      new Transaction(null, transaction.fromAddr, transaction.calcFee()),
+    ];
+  }
+  if (transaction.data) {
+    //보내는 데이터가 있는 경우 해당 데이터에서 계산된 수수료를 amount로 지정
+    transaction.amount = transaction.calcFee();
   }
   //pendingTranscation에 포함된 거래내역에 대해 잔액 변동률 계산
   let balanceDeltaFromPendingTransactions = 0;
   this.pendingTransactions.map((tx) => {
-    if (tx.fromAddr === transcation.fromAddr) {
+    if (tx.fromAddr === transaction.fromAddr) {
       balanceDeltaFromPendingTransactions -= tx.amount;
-    } else if (tx.toAddr === transcation.fromAddr) {
+    } else if (tx.toAddr === transaction.fromAddr) {
       balanceDeltaFromPendingTransactions += tx.amount;
     }
   });
   if (
-    this.getBalanceOfAddress(transcation.fromAddr) -
-      transcation.amount -
+    this.getBalanceOfAddress(transaction.fromAddr) -
+      transaction.amount +
       balanceDeltaFromPendingTransactions <
     0
   ) {
     throw "잔액보다 더 많이 보낼 수 없습니다";
   }
   //can submit transcation to blockchain
-  this.pendingTransactions.push(transcation);
+  this.pendingTransactions.push(transaction);
 };
+
+Blockchain.prototype.getTranscationCountOfAddress = function (addr) {
+  //블록체인에 존재하는 트랜잭션에서 해당 주소로 된 트랜잭션이 있는지 탐색
+  let txCnt = this.chain.reduce((acc, block, idx) => {
+    if (idx === 0) return acc;
+    let next = acc;
+    block.transactions.forEach((tx) => {
+      if (tx.toAddr === addr || tx.fromAddr === addr) next++;
+    });
+
+    return next;
+  }, 0);
+  //pendingTransactions에 해당 주소로 된 트랜잭션이 있는지 탐색
+  this.pendingTransactions.forEach((tx) => {
+    if (tx.toAddr === addr || tx.fromAddr === addr) next++;
+  });
+
+  return txCnt;
+};
+
 //어떤 지갑 주소에 대해 잔액을 알고 싶을 떄 이 함수를 사용한다.
 //각각의 주소에 대해 잔액을 저장하지 않기 때문에 모든 트랜잭션에 대해 순회하며 잔액을 계산해야 한다
 Blockchain.prototype.getBalanceOfAddress = function (addr) {
@@ -144,6 +199,7 @@ Blockchain.prototype.getBalanceOfAddress = function (addr) {
       }
     });
   });
+
   return balance;
 };
 // 더 이상 임의의 데이터를 블록에 추가시키는 동작을 하지 않는다
