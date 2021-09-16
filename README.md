@@ -9,7 +9,7 @@
 1. write `node index.js`
 2. you can do any test as re-wrting `index.js` content.
 
-# Playground
+# Playground (Tutorial)
 
 1. write `node playground.js` or `npm run playground` or `yarn playground`
 
@@ -63,9 +63,7 @@ publicKey is wallet address.
 
 So, geon's wallet address is `04fe19a3c8f2be18dce9bdacf8dd6ad8f84bf469231243f6452df14241847221a9fa6431e9d013de29be0815b9af7d93606883ce426c2ea53e45182cb604411ac2`
 
----
-
-##### create transaction (geon send 100 coin to kane)
+#### create transaction (geon send 100 coin to kane)
 
 `create transaction 04fe19a3c8f2be18dce9bdacf8dd6ad8f84bf469231243f6452df14241847221a9fa6431e9d013de29be0815b9af7d93606883ce426c2ea53e45182cb604411ac2 kane 100`
 
@@ -78,7 +76,7 @@ insert command (if need help? insert 'help')>>  create transaction 04fe19a3c8f2b
 잔액보다 더 많이 보낼 수 없습니다
 ```
 
-##### Why occur error?
+#### Why occur error?
 
 geon's balance is 0.
 
