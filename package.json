@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "playground": "node playground.js"
+  },
   "dependencies": {
     "crypto-js": "^4.1.1",
     "elliptic": "^6.5.4"
