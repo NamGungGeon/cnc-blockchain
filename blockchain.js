@@ -2,7 +2,7 @@ const SHA256 = require("crypto-js/sha256");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 
-const wallets = require("./known-wallet");
+const wallets = require("./wallets");
 
 //Transaction은 보내는 지갑주소, 받을 지갑주소, 보낸 코인의 양을 포함하는 객체이다
 const Transaction = function (fromAddr, toAddr, amount, data) {

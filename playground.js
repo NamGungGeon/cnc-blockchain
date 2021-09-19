@@ -2,7 +2,7 @@ const readline = require("readline");
 const { Blockchain, Transaction } = require("./blockchain");
 const { generateKey, keys } = require("./keygen");
 const fs = require("fs");
-const wallets = require("./known-wallet");
+const wallets = require("./wallets");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 
