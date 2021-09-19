@@ -104,7 +104,7 @@ const execCmd = (callback) => {
                 filePath || null
               );
               if (filePath) {
-                tx = await Transaction.withDataUpload(
+                tx = await Transaction.createTxWithNFT(
                   fromAddr,
                   wallets.receptionist,
                   amount,

@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const wallets = require("./wallets");
 
 //Transaction은 보내는 지갑주소, 받을 지갑주소, 보낸 코인의 양을 포함하는 객체이다
-const Transaction = function (fromAddr, toAddr, amount, data) {
+const Transaction = function (fromAddr, toAddr, amount, nft) {
   this.fromAddr = fromAddr;
   this.toAddr = toAddr;
   this.amount = amount;
@@ -14,24 +14,24 @@ const Transaction = function (fromAddr, toAddr, amount, data) {
   //data에는 fromAddr이 업로드할 데이터(파일, 문자열 등)이 포함될 수 있다
   //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
   //정해진 수수료만큼을 포함시켜야 한다.
-  this.data = data;
+  this.nft = nft;
 };
 //data is buf or string
-Transaction.withDataUpload = async function (fromAddr, toAddr, data) {
-  const fileHash = crypto.createHash("sha256").update(data).digest("hex");
-  return new Transaction(fromAddr, wallets.receptionist, 0, fileHash);
+Transaction.createTxWithNFT = async function (fromAddr, toAddr, data) {
+  const nft = crypto.createHash("sha256").update(data).digest("hex");
+  return new Transaction(fromAddr, toAddr, 0, nft);
 };
 Transaction.prototype.calcFee = function () {
-  if (!this.data) {
+  if (!this.nft) {
     return 0;
   }
-  const length = JSON.stringify(this.data).length;
+  const length = JSON.stringify(this.nft).length;
 
   return Math.ceil(length / 1024);
 };
 Transaction.prototype.calcHash = function () {
   return SHA256(
-    this.fromAddr + this.toAddr + this.amount + this.data
+    this.fromAddr + this.toAddr + this.amount + this.nft
   ).toString();
 };
 Transaction.prototype.signTransaction = function (signKey) {
@@ -107,13 +107,14 @@ const Blockchain = function () {
   //매우 많은 수의 사용자들이 P2P로 연결되어 있기 때문에 값을 조작할 경우 그 값은 무시될 것이다
   this.miningRewrad = 100;
 };
-Blockchain.prototype.findDataOwner = function (data) {
+Blockchain.prototype.findNFTOwner = function (nft) {
   let owner = null;
   //pendingTransaction부터 처리
   if (this.pendingTransactions.length) {
+    console.log(this.pendingTransactions);
     for (let i = this.pendingTransactions.length - 1; i >= 0; i--) {
       const ptx = this.pendingTransactions[i];
-      if (ptx.data === data) {
+      if (ptx.nft === nft) {
         if (ptx.toAddr === wallets.receptionist) {
           owner = ptx.fromAddr;
         } else {
@@ -130,7 +131,7 @@ Blockchain.prototype.findDataOwner = function (data) {
     const block = this.chain[i];
     for (let j = block.transactions.length - 1; j >= 0; j--) {
       const tx = block.transactions[j];
-      if (tx.data === data) {
+      if (tx.nft === nft) {
         if (tx.toAddr === wallets.receptionist) {
           owner = tx.fromAddr;
         } else {
@@ -164,20 +165,20 @@ Blockchain.prototype.addTransaction = function (transaction) {
   if (!transaction.isValid()) {
     throw "무효한 트랜잭션입니다";
   }
-  if (transaction.data && transaction.toAddr !== wallets.receptionist) {
-    throw "데이터를 포함시키기 위해서는 반드시 지정된 지갑에 수수료를 지불해야 합니다";
-  }
 
-  if (transaction.data) {
-    const owner = this.findDataOwner(transaction.data);
-    console.log("owner", owner);
+  if (transaction.nft) {
+    const owner = this.findNFTOwner(transaction.nft);
+    if (!owner && transaction.toAddr !== wallets.receptionist) {
+      throw "처음 NFT를 생성하기 위해서는 반드시 지정된 지갑에 수수료를 지불해야 합니다";
+    }
+
     if (owner && transaction.fromAddr !== owner) {
       throw "해당 토큰의 소유자가 아닙니다";
     }
   }
 
   if (
-    transaction.data &&
+    transaction.nft &&
     this.getTransactionCountOfAddress(transaction.fromAddr) === 0
   ) {
     //처음 사용자일 경우 해당 트랜잭션에 대한 수수료 면제
@@ -187,7 +188,7 @@ Blockchain.prototype.addTransaction = function (transaction) {
       new Transaction(null, transaction.fromAddr, transaction.calcFee()),
     ];
   }
-  if (transaction.data) {
+  if (transaction.nft) {
     //보내는 데이터가 있는 경우 해당 데이터에서 계산된 수수료를 amount로 지정
     transaction.amount = transaction.calcFee();
   }
