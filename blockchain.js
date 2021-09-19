@@ -1,6 +1,7 @@
 const SHA256 = require("crypto-js/sha256");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
+const crypto = require("crypto");
 
 const wallets = require("./wallets");
 
@@ -14,6 +15,11 @@ const Transaction = function (fromAddr, toAddr, amount, data) {
   //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
   //정해진 수수료만큼을 포함시켜야 한다.
   this.data = data;
+};
+//data is buf or string
+Transaction.withDataUpload = async function (fromAddr, toAddr, data) {
+  const fileHash = crypto.createHash("sha256").update(data).digest("hex");
+  return new Transaction(fromAddr, wallets.receptionist, 0, fileHash);
 };
 Transaction.prototype.calcFee = function () {
   if (!this.data) {
@@ -47,8 +53,8 @@ Transaction.prototype.isValid = function () {
   return publicKey.verify(this.calcHash(), this.signiture);
 };
 //Block
-//더 이상 index값은 필요하지 않다
-//왜냐하면 어차피 블록들은 prevHash<->hash로 각각의 블록 위치가 결정되기 때문이다
+//더 이상 index값은 필요하지 77766
+//왜냐하면 어차피 블록들은 prevHash<->hash로 각각의 블 위치가 결정되기 때문이다
 const Block = function (timestamp, transactions, prevHash = "") {
   this.timestamp = timestamp;
   this.transactions = transactions;
@@ -101,6 +107,41 @@ const Blockchain = function () {
   //매우 많은 수의 사용자들이 P2P로 연결되어 있기 때문에 값을 조작할 경우 그 값은 무시될 것이다
   this.miningRewrad = 100;
 };
+Blockchain.prototype.findDataOwner = function (data) {
+  let owner = null;
+  //pendingTransaction부터 처리
+  if (this.pendingTransactions.length) {
+    for (let i = this.pendingTransactions.length - 1; i >= 0; i--) {
+      const ptx = this.pendingTransactions[i];
+      if (ptx.data === data) {
+        if (ptx.toAddr === wallets.receptionist) {
+          owner = ptx.fromAddr;
+        } else {
+          owner = ptx.toAddr;
+        }
+      }
+      if (owner) break;
+    }
+    if (owner) return owner;
+  }
+
+  //pendingTransaction에서 못찾았으면 block에서 탐색
+  for (let i = this.chain.length - 1; i >= 0; i--) {
+    const block = this.chain[i];
+    for (let j = block.transactions.length - 1; j >= 0; j--) {
+      const tx = block.transactions[j];
+      if (tx.data === data) {
+        if (tx.toAddr === wallets.receptionist) {
+          owner = tx.fromAddr;
+        } else {
+          owner = tx.toAddr;
+        }
+      }
+    }
+    if (owner) break;
+  }
+  return owner;
+};
 Blockchain.prototype.minePendingTransactions = function (miningRewardAddress) {
   //예를 들어 비트코인에서는 현재 대기중인 모든 트랜잭션을 블록에 포함시키지는 않는다
   //비트코인에서 하나의 블록 사이즈는 1MB를 넘길 수 없으므로, 채굴자가 어떤 트랜잭션을 포함시킬지를 선택한다
@@ -126,9 +167,18 @@ Blockchain.prototype.addTransaction = function (transaction) {
   if (transaction.data && transaction.toAddr !== wallets.receptionist) {
     throw "데이터를 포함시키기 위해서는 반드시 지정된 지갑에 수수료를 지불해야 합니다";
   }
+
+  if (transaction.data) {
+    const owner = this.findDataOwner(transaction.data);
+    console.log("owner", owner);
+    if (owner && transaction.fromAddr !== owner) {
+      throw "해당 토큰의 소유자가 아닙니다";
+    }
+  }
+
   if (
     transaction.data &&
-    this.getTranscationCountOfAddress(transaction.fromAddr) === 0
+    this.getTransactionCountOfAddress(transaction.fromAddr) === 0
   ) {
     //처음 사용자일 경우 해당 트랜잭션에 대한 수수료 면제
     //-> 해당 트랜잭션의 수수료만큼 코인 지급
@@ -162,7 +212,7 @@ Blockchain.prototype.addTransaction = function (transaction) {
   this.pendingTransactions.push(transaction);
 };
 
-Blockchain.prototype.getTranscationCountOfAddress = function (addr) {
+Blockchain.prototype.getTransactionCountOfAddress = function (addr) {
   //블록체인에 존재하는 트랜잭션에서 해당 주소로 된 트랜잭션이 있는지 탐색
   let txCnt = this.chain.reduce((acc, block, idx) => {
     if (idx === 0) return acc;
@@ -175,7 +225,7 @@ Blockchain.prototype.getTranscationCountOfAddress = function (addr) {
   }, 0);
   //pendingTransactions에 해당 주소로 된 트랜잭션이 있는지 탐색
   this.pendingTransactions.forEach((tx) => {
-    if (tx.toAddr === addr || tx.fromAddr === addr) next++;
+    if (tx.toAddr === addr || tx.fromAddr === addr) txCnt++;
   });
 
   return txCnt;
