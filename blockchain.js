@@ -1,4 +1,4 @@
-const SHA256 = require("crypto-js/sha256");
+const { SHA256 } = require("crypto-js");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 const crypto = require("crypto");
@@ -15,6 +15,10 @@ const Transaction = function (fromAddr, toAddr, amount, nft) {
   //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
   //정해진 수수료만큼을 포함시켜야 한다.
   this.nft = nft;
+};
+Transaction.restore = (json) => {
+  const tx = new Transaction(json.fromAddr, json.toAddr, json.amount, json.nft);
+  return tx;
 };
 //data is buf or string
 Transaction.createTxWithNFT = async function (fromAddr, toAddr, data) {
@@ -61,6 +65,16 @@ const Block = function (timestamp, transactions, prevHash = "") {
   this.prevHash = prevHash;
   this.hash = this.calcHash();
   this.nonce = 0;
+};
+Block.restore = (json) => {
+  const block = new Block();
+  block.timestamp = json.timestamp;
+  block.transactions = json.transactions.map((tx) => Transaction.restore(tx));
+  block.prevHash = json.prevHash;
+  block.hash = json.hash;
+  block.nonce = json.nonce;
+
+  return block;
 };
 Block.prototype.calcHash = function () {
   //index, prevHash, timestamp, data를 입력으로 해시값을 계산한다
@@ -289,6 +303,18 @@ Blockchain.prototype.isValid = function () {
     }
   }
   return true;
+};
+
+Blockchain.restore = function (json) {
+  const blockchain = new Blockchain();
+
+  blockchain.chain = json.chain.map((block) => Block.restore(block));
+  blockchain.difficulty = json.difficulty;
+  blockchain.pendingTransactions = json.pendingTransactions.map((tx) =>
+    Transaction.restore(tx)
+  );
+  blockchain.miningRewrad = json.miningRewrad;
+  return blockchain;
 };
 
 module.exports = {
