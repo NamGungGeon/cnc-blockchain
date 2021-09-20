@@ -8,8 +8,10 @@ const crypto = require("crypto");
 
 //start test
 const cncCoin = new Blockchain();
-const [k1Public, k1Private, k1Key] = generateKey();
-const [k2Public, k2Private, k2Key] = generateKey();
+const k1Key = generateKey("k1");
+const k1Public = k1Key.getPublic("hex");
+const k2Key = generateKey("k2");
+const k2Public = k1Key.getPublic("hex");
 
 const exec = async () => {
   const tx = await Transaction.createTxWithNFT(

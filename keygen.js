@@ -7,7 +7,7 @@
  * const [walletAddr, privateKey, key]= generateKey();
  */
 
-const EC = require("elliptic").ec;
+const { ec: EC } = require("elliptic");
 const ec = new EC("secp256k1");
 
 const keys = [];
@@ -23,7 +23,7 @@ module.exports = {
 
     keys.push({ tag, publicKey, privateKey });
 
-    return [publicKey, privateKey, key];
+    return key;
   },
   keys,
 };
