@@ -17,6 +17,7 @@
     "webpack-cli": "^4.8.0"
   },
   "browser": {
+    "fs": false,
     "crypto": false
   }
 }
