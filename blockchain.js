@@ -320,4 +320,6 @@ Blockchain.restore = function (json) {
 module.exports = {
   Blockchain,
   Transaction,
+  wallets,
+  generateKey: require("./keygen").generateKey,
 };
