@@ -1,7 +1,21 @@
 {
-  "name": "blockchain",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "cnc-blockchain",
+  "description": "cnc-blockchain for implementing blockchain simply",
+  "keywords": [
+    "blockchain",
+    "cnc"
+  ],
+  "homepage": "https://github.com/NamGungGeon/cnc-blockchain",
+  "bugs": {
+    "url": "https://github.com/NamGungGeon/cnc-blockchain/issues",
+    "email": "rndrjs123@naver.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NamGungGeon/cnc-blockchain.git"
+  },
+  "version": "1.0.1",
+  "main": "blockchain.js",
   "license": "MIT",
   "scripts": {
     "playground": "node playground.js",
@@ -9,8 +23,7 @@
   },
   "dependencies": {
     "crypto-js": "^4.1.1",
-    "elliptic": "^6.5.4",
-    "ipfs-core": "^0.10.8"
+    "elliptic": "^6.5.4"
   },
   "devDependencies": {
     "webpack": "^5.53.0",
@@ -19,5 +32,8 @@
   "browser": {
     "fs": false,
     "crypto": false
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

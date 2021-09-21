@@ -1,0 +1,8 @@
+/node_modules
+/.vscode
+/dist
+/test.js
+/playground.js
+/webpack.config.js
+/.gitignore
+/npm_test

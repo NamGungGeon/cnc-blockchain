@@ -1,10 +1,16 @@
-# Prerequisite
+# Installation for module
+
+`npm install cnc-blockchain`
+or
+`yarn add cnc-blockchain`
+
+# Prerequisite for tutorial
 
 1. install [nodejs](https://nodejs.org/ko/)
 2. git clone "https://github.com/NamGungGeon/cnc-blockchain" [path_you_want]
 3. after moving to [path-you-want], write `npm install` or `yarn` into command line for installing required modules
 
-# Playground (Tutorial)
+# Tutorial with playground.js
 
 1. write `node playground.js` or `npm run playground` or `yarn playground`
 
