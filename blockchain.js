@@ -322,6 +322,4 @@ Blockchain.restore = function (json) {
 module.exports = {
   Blockchain,
   Transaction,
-  wallets,
-  ...require("./keygen"),
 };
