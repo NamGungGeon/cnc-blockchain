@@ -69,7 +69,9 @@ const Block = function (timestamp, transactions, prevHash = "") {
 Block.restore = (json) => {
   const block = new Block();
   block.timestamp = json.timestamp;
-  block.transactions = json.transactions.map((tx) => Transaction.restore(tx));
+  block.transactions = Array.isArray(json.transactions)
+    ? json.transactions.map((tx) => Transaction.restore(tx))
+    : "genesisBlock";
   block.prevHash = json.prevHash;
   block.hash = json.hash;
   block.nonce = json.nonce;
@@ -321,5 +323,5 @@ module.exports = {
   Blockchain,
   Transaction,
   wallets,
-  generateKey: require("./keygen").generateKey,
+  ...require("./keygen"),
 };

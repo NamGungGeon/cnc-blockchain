@@ -25,5 +25,8 @@ module.exports = {
 
     return key;
   },
+  fromPrivateKey: (privateKey) => {
+    return ec.keyFromPrivate(privateKey);
+  },
   keys,
 };
