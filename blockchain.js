@@ -91,9 +91,7 @@ Block.prototype.calcHash = function () {
 Block.prototype.mining = function (difficulty) {
   const start = new Date();
   //difficulty개의 0으로 시작하는 hash가 발생될 때 까지 해시를 반복한다
-  while (
-    this.hash.substring(0, difficulty) !== Array(difficulty).fill("0").join("")
-  ) {
+  while (!this.isValidNonce(difficulty)) {
     this.nonce++;
     this.hash = this.calcHash();
   }
@@ -104,8 +102,35 @@ Block.prototype.mining = function (difficulty) {
   console.log("block is mined", this.nonce);
   //걸린 시간 출력
   console.log("ellipsed time is ", end.getTime() - start.getTime(), "ms");
+
+  return this;
+};
+Block.prototype.isValid = function (prevBlock, difficulty) {
+  if (this.hash !== this.calcHash()) {
+    console.log("hash 불일치");
+    return false;
+  }
+  if (this.prevHash !== prevBlock.hash) {
+    console.log("prevHash 불일치");
+    return false;
+  }
+  if (!this.isValidNonce(difficulty)) {
+    console.log("nonce 불일치");
+    return false;
+  }
+  if (!this.hasValidTransactions()) {
+    return false;
+  }
+  return true;
+};
+Block.prototype.isValidNonce = function (difficulty) {
+  //difficulty개의 0으로 시작하는 hash가 발생될 때 까지 해시를 반복한다
+  return (
+    this.hash.substring(0, difficulty) === Array(difficulty).fill("0").join("")
+  );
 };
 Block.prototype.hasValidTransactions = function () {
+  if (this.transactions.length === 0) return true;
   return this.transactions.every((tx) => {
     return tx.isValid();
   });
@@ -173,6 +198,8 @@ Blockchain.prototype.minePendingTransactions = function (miningRewardAddress) {
   this.pendingTransactions = [
     new Transaction(null, miningRewardAddress, this.miningRewrad),
   ];
+
+  return block;
 };
 Blockchain.prototype.addTransaction = function (transaction) {
   if (!transaction.toAddr || !transaction.fromAddr) {
@@ -280,7 +307,7 @@ Blockchain.prototype.getBalanceOfAddress = function (addr) {
 // };
 Blockchain.prototype.createGenesisBlock = function () {
   //번호 0번, 이전 해시 "0", data를 "GenesisBlock"으로 임의로 지정
-  return new Block("2021/09/13", "GenesisBlock", "0");
+  return new Block(1633083312156, "GenesisBlock", "");
 };
 Blockchain.prototype.getLatestBlock = function () {
   return this.chain[this.chain.length - 1];
@@ -322,4 +349,5 @@ Blockchain.restore = function (json) {
 module.exports = {
   Blockchain,
   Transaction,
+  Block,
 };
