@@ -52,6 +52,10 @@ const start = (
         const conn = peer.connect(userId);
         conn.serialization = "json";
         conn.on("open", () => {
+          try {
+          } catch (e) {
+            console.error(e);
+          }
           peerCMD.sendCMD(CMD_REQUEST_FULLBLOCK, null, conn);
           console.log("peer connected!", userId);
         });
@@ -134,6 +138,10 @@ const start = (
 };
 
 // start();
+//catch unCaughtException
+process.on("uncaughtException", function (err) {
+  console.error("uncaughtException (Node is alive)", err);
+});
 
 module.exports = {
   joinNetwork: start,
