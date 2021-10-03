@@ -10,6 +10,7 @@ const Transaction = function (fromAddr, toAddr, amount, nft) {
   this.fromAddr = fromAddr;
   this.toAddr = toAddr;
   this.amount = amount;
+  this.signiture = null;
 
   //data에는 fromAddr이 업로드할 데이터(파일, 문자열 등)이 포함될 수 있다
   //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
@@ -18,6 +19,7 @@ const Transaction = function (fromAddr, toAddr, amount, nft) {
 };
 Transaction.restore = (json) => {
   const tx = new Transaction(json.fromAddr, json.toAddr, json.amount, json.nft);
+  tx.signiture = json.signiture;
   return tx;
 };
 //data is buf or string

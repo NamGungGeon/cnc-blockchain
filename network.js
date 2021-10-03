@@ -1,5 +1,3 @@
-const io = require("socket.io-client");
-const Peerjs = require("peerjs-nodejs");
 const { Blockchain, Transaction } = require("./blockchain");
 const {
   PeerCMD,
@@ -9,20 +7,29 @@ const {
   CMD_MAKE_PTX,
 } = require("./network-cmd");
 
-let blockchain = new Blockchain();
+const blockchain = new Blockchain();
 const peerCMD = new PeerCMD(blockchain);
 let peerCnt = 0;
-const start = (socketAddr = "http://localhost:3000", peer = Peerjs()) => {
+
+const start = (
+  onReady,
+  socketAddr = "http://3.37.53.134:3003",
+  peer = require("peerjs-nodejs")(undefined, {
+    host: "3.37.53.134",
+    port: "3004",
+  })
+) => {
   peer.on("open", (myId) => {
     console.log("peer is opened", myId);
     //id는 peerjs 에서 사용할 고유 id
-
+    const io = require("socket.io-client");
     const socket = io(socketAddr);
     socket.on("connect", () => {
       console.log("socket is connected");
     });
     socket.on("roomId", (roomId) => {
       console.log("roomId", roomId);
+      if (onReady) onReady();
 
       // initSocket(socket, roomId);
       socket.emit("join-room", roomId, myId);
@@ -54,11 +61,11 @@ const start = (socketAddr = "http://localhost:3000", peer = Peerjs()) => {
             const { cmd, data } = msg;
             try {
               peerCMD.receiveCMD(cmd, data, conn);
-              if (cmd === CMD_REQUEST_FULLBLOCK && data) {
-                const newBlock =
-                  blockchain.minePendingTransactions("test addr");
-                peerCMD.sendCMD(CMD_MAKE_BLOCK, newBlock, conn);
-              }
+              // if (cmd === CMD_REQUEST_FULLBLOCK && data) {
+              //   const newBlock =
+              //     blockchain.minePendingTransactions("test addr");
+              //   peerCMD.sendCMD(CMD_MAKE_BLOCK, newBlock, conn);
+              // }
             } catch (e) {
               console.error("onPeerCMDException", e);
             }
@@ -106,6 +113,7 @@ const start = (socketAddr = "http://localhost:3000", peer = Peerjs()) => {
   // peer data send/receive rules
   // {cmd: '', data: '...'}
   peer.on("connection", function (conn) {
+    peerCMD.setConnection(conn);
     console.log("on connection");
     conn.on("open", () => {});
     conn.on("data", (msg) => {
@@ -121,10 +129,16 @@ const start = (socketAddr = "http://localhost:3000", peer = Peerjs()) => {
       }
     });
   });
+
+  return peerCMD;
 };
 
-start();
+// start();
 
 module.exports = {
   joinNetwork: start,
+  CMD_REQUEST_FULLBLOCK,
+  CMD_REQUEST_PTX,
+  CMD_MAKE_BLOCK,
+  CMD_MAKE_PTX,
 };

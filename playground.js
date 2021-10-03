@@ -29,6 +29,9 @@ command list ========
 4. show keychain
 >> show all created keypairs with label
 
+5. show balance [addr]
+>> show balance of addr (wallet addr; public key)
+
 !!!!!!!!!!!!!! create !!!!!!!!!!!!!!
 1. create keypair [label]
 >> create new keypair with label
@@ -73,6 +76,10 @@ const execCmd = (callback) => {
               console.log(cncCoin.pendingTransactions);
             } else if (target === "keychain") {
               console.log(keys);
+            } else if (target === "balance") {
+              const addr = cmds[2];
+              const balance = cncCoin.getBalanceOfAddress(addr);
+              console.log("balance :", balance);
             } else {
               console.error("invalid target");
             }
@@ -125,6 +132,8 @@ const execCmd = (callback) => {
               cncCoin.minePendingTransactions(fromAddr);
 
               console.log("mining end...");
+            } else {
+              console.error("invalid target");
             }
             break;
           case "help":

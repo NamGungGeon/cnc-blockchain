@@ -1,3 +1,4 @@
+const blockchain = require(".");
 const { Block, Blockchain, Transaction } = require("./blockchain");
 
 const CMD_REQUEST_FULLBLOCK = "request-fullblock";
@@ -11,7 +12,15 @@ const PeerCMD = function (blockchain) {
   }
   this.blockchain = blockchain;
 };
-PeerCMD.prototype.receiveCMD = function (cmd, data, conn) {
+
+PeerCMD.prototype.setConnection = function (conn) {
+  this.conn = conn;
+};
+
+PeerCMD.prototype.setCallback = function (callback) {
+  this.handleCallback = callback;
+};
+PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
   console.log("receiveCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
@@ -72,14 +81,23 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn) {
       ) {
         throw "올바르지 않은 블록입니다";
       }
+      //TODO: 현재 존재하는 pendingTransactions에서 블록에 포함된 tx전부 제거
+      this.blockchain.pendingTransactions =
+        this.blockchain.pendingTransactions.filter((ptx) => {
+          const ptxsInBlock = block.transactions;
+          return !ptxsInBlock.find(
+            (ptxib) => ptxib.signiture === ptx.signiture
+          );
+        });
       this.blockchain.chain.push(block);
       break;
     default:
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
+  if (this.handleCallback) this.handleCallback();
 };
-PeerCMD.prototype.sendCMD = function (cmd, data, conn) {
+PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
   console.log("sendCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
@@ -89,20 +107,24 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn) {
       conn.send(this.makeCMD(CMD_REQUEST_PTX, null, conn));
       break;
     case CMD_MAKE_PTX:
-      if (!(data instanceof Transaction)) {
+      const tx = data;
+      if (!(tx instanceof Transaction)) {
         throw "invalid transaction data";
       }
-      conn.send(this.makeCMD(CMD_MAKE_PTX, data, conn));
+      this.blockchain.pendingTransactions.push(tx);
+      conn.send(this.makeCMD(CMD_MAKE_PTX, tx, conn));
       break;
     case CMD_MAKE_BLOCK:
-      if (!(data instanceof Block)) {
+      const block = data;
+      if (!(block instanceof Block)) {
         throw "invalid block data";
       }
-      conn.send(this.makeCMD(CMD_MAKE_BLOCK, data, conn));
+      conn.send(this.makeCMD(CMD_MAKE_BLOCK, block, conn));
       break;
     default:
       throw "unknown cmd";
   }
+  if (this.handleCallback) this.handleCallback();
 };
 PeerCMD.prototype.makeCMD = function (cmd, data) {
   return { cmd, data };
