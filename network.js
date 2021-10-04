@@ -57,10 +57,10 @@ const start = (
         conn.serialization = "json";
         conn.on("open", () => {
           try {
+            peerCMD.sendCMD(CMD_REQUEST_FULLBLOCK, null, conn);
           } catch (e) {
-            console.error(e);
+            console.error("sendCMD", e);
           }
-          peerCMD.sendCMD(CMD_REQUEST_FULLBLOCK, null, conn);
           console.log("peer connected!", userId);
         });
         conn.on("data", (msg) => {
