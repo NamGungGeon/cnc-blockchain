@@ -9,14 +9,18 @@ const {
 
 const blockchain = new Blockchain();
 const peerCMD = new PeerCMD(blockchain);
+peerCMD.setCallback(() => {
+  console.log("handled", peerCMD.blockchain);
+});
 let peerCnt = 0;
 
 const start = (
   onReady,
   socketAddr = "http://3.37.53.134:3003",
   peer = require("peerjs-nodejs")(undefined, {
-    host: "3.37.53.134",
-    port: "3004",
+    // host: "3.37.53.134",
+    // path: "/peerjs",
+    // port: "3004",
   })
 ) => {
   peer.on("open", (myId) => {
@@ -118,7 +122,6 @@ const start = (
   // {cmd: '', data: '...'}
   peer.on("connection", function (conn) {
     peerCMD.setConnection(conn);
-    console.log("on connection");
     conn.on("open", () => {});
     conn.on("data", (msg) => {
       console.log("onData", msg, typeof msg);
