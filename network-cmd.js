@@ -47,10 +47,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
     case CMD_REQUEST_PTX:
       if (!data) {
         conn.send(
-          this.makeCMD(
-            CMD_REQUEST_PTX,
-            JSON.stringify(this.blockchain.pendingTransactions)
-          )
+          this.makeCMD(CMD_REQUEST_PTX, this.blockchain.pendingTransactions)
         );
         return;
       }
@@ -66,13 +63,10 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       break;
     case CMD_MAKE_PTX:
       const tx = Transaction.restore(data);
-      if (!tx.isValid()) {
-        throw "올바르지 않은 트랜잭션입니다";
-      }
       this.blockchain.addTransaction(tx);
       break;
     case CMD_MAKE_BLOCK:
-      const block = Block.restore(data);
+      const block = Block.restore(data.block);
       if (
         !block.isValid(
           this.blockchain.getLatestBlock(),
@@ -81,6 +75,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       ) {
         throw "올바르지 않은 블록입니다";
       }
+      const miner = data.miner;
       //TODO: 현재 존재하는 pendingTransactions에서 블록에 포함된 tx전부 제거
       this.blockchain.pendingTransactions =
         this.blockchain.pendingTransactions.filter((ptx) => {
@@ -89,7 +84,12 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
             (ptxib) => ptxib.signiture === ptx.signiture
           );
         });
-      this.blockchain.chain.push(block);
+      //채굴 보상 등록
+      this.blockchain.pendingTransactions = [
+        new Transaction(null, miner, this.blockchain.miningRewrad),
+        ...this.blockchain.pendingTransactions,
+      ];
+      this.blockchain.attachNewBlock(block);
       break;
     default:
       throw "unknown cmd";
@@ -111,15 +111,18 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
       if (!(tx instanceof Transaction)) {
         throw "invalid transaction data";
       }
-      this.blockchain.pendingTransactions.push(tx);
+      this.blockchain.addTransaction(tx);
       conn.send(this.makeCMD(CMD_MAKE_PTX, tx, conn));
       break;
     case CMD_MAKE_BLOCK:
-      const block = data;
+      const { block, miner } = data;
       if (!(block instanceof Block)) {
         throw "invalid block data";
       }
-      conn.send(this.makeCMD(CMD_MAKE_BLOCK, block, conn));
+      if (!miner) {
+        throw "miner is not defined";
+      }
+      conn.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn));
       break;
     default:
       throw "unknown cmd";

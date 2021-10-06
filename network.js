@@ -140,7 +140,7 @@ const start = (
   return peerCMD;
 };
 
-start();
+// start();
 //catch unCaughtException
 process.on("uncaughtException", function (err) {
   console.error("uncaughtException (Node is alive)", err);
