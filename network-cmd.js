@@ -6,26 +6,34 @@ const CMD_REQUEST_PTX = "request-penddingtx";
 const CMD_MAKE_PTX = "make-penddingtx";
 const CMD_MAKE_BLOCK = "make-block";
 
-const PeerCMD = function (blockchain) {
+const PeerCMD = function (blockchain, conns) {
   if (!blockchain) {
     throw "blockchain is null";
   }
+  this.conns = conns;
   this.blockchain = blockchain;
 };
 
-PeerCMD.prototype.setConnection = function (conn) {
-  this.conn = conn;
-};
+// PeerCMD.prototype.setConnection = function (conn) {
+//   this.conn = conn;
+// };
 
 PeerCMD.prototype.setCallback = function (callback) {
   this.handleCallback = callback;
 };
-PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
+PeerCMD.prototype.broadCastToPeers = function (handle = (conn) => {}) {
+  if (this.conns) {
+    this.conns.forEach(handle);
+  }
+};
+PeerCMD.prototype.receiveCMD = function (cmd, data) {
   console.log("receiveCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
       if (!data) {
-        conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
+        this.broadCastToPeers((conn) =>
+          conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain))
+        );
         return;
       }
       const blockchain = Blockchain.restore(data);
@@ -46,8 +54,10 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       break;
     case CMD_REQUEST_PTX:
       if (!data) {
-        conn?.send(
-          this.makeCMD(CMD_REQUEST_PTX, this.blockchain.pendingTransactions)
+        this.broadCastToPeers((conn) =>
+          conn?.send(
+            this.makeCMD(CMD_REQUEST_PTX, this.blockchain.pendingTransactions)
+          )
         );
         return;
       }
@@ -95,16 +105,20 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
-  if (this.handleCallback) this.handleCallback(cmd, data);
+  if (this.handleCallback) this.handleCallback("receive", cmd, data);
 };
-PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
+PeerCMD.prototype.sendCMD = function (cmd, data, conns) {
   console.log("sendCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
-      conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null, conn));
+      this.broadCastToPeers((conn) =>
+        conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null, conn))
+      );
       break;
     case CMD_REQUEST_PTX:
-      conn?.send(this.makeCMD(CMD_REQUEST_PTX, null, conn));
+      this.broadCastToPeers((conn) =>
+        conn?.send(this.makeCMD(CMD_REQUEST_PTX, null, conn))
+      );
       break;
     case CMD_MAKE_PTX:
       const tx = data;
@@ -112,7 +126,9 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
         throw "invalid transaction data";
       }
       this.blockchain.addTransaction(tx);
-      conn?.send(this.makeCMD(CMD_MAKE_PTX, tx, conn));
+      this.broadCastToPeers((conn) =>
+        conn?.send(this.makeCMD(CMD_MAKE_PTX, tx, conn))
+      );
       break;
     case CMD_MAKE_BLOCK:
       const { block, miner } = data;
@@ -122,12 +138,15 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
       if (!miner) {
         throw "miner is not defined";
       }
+      this.broadCastToPeers((conn) =>
+        conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn))
+      );
       conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn));
       break;
     default:
       throw "unknown cmd";
   }
-  if (this.handleCallback) this.handleCallback(cmd, data);
+  if (this.handleCallback) this.handleCallback("send", cmd, data);
 };
 PeerCMD.prototype.makeCMD = function (cmd, data) {
   return { cmd, data };

@@ -8,7 +8,8 @@ const {
 } = require("./network-cmd");
 
 const blockchain = new Blockchain();
-const peerCMD = new PeerCMD(blockchain);
+const conns = [];
+const peerCMD = new PeerCMD(blockchain, conns);
 peerCMD.setCallback(() => {
   console.log("handled", peerCMD.blockchain);
 });
@@ -56,8 +57,9 @@ const start = (
         const conn = peer.connect(userId);
         conn.serialization = "json";
         conn.on("open", () => {
+          conns.push(conn);
           try {
-            peerCMD.sendCMD(CMD_REQUEST_FULLBLOCK, null, conn);
+            peerCMD.sendCMD(CMD_REQUEST_FULLBLOCK, null, conns);
           } catch (e) {
             console.error("sendCMD", e);
           }
@@ -68,7 +70,7 @@ const start = (
           if (typeof msg === "object" && msg.cmd) {
             const { cmd, data } = msg;
             try {
-              peerCMD.receiveCMD(cmd, data, conn);
+              peerCMD.receiveCMD(cmd, data, conns);
               // if (cmd === CMD_REQUEST_FULLBLOCK && data) {
               //   const newBlock =
               //     blockchain.minePendingTransactions("test addr");
@@ -82,6 +84,7 @@ const start = (
           }
         });
         conn.on("close", () => {
+          conns.splice(conns.indexOf(conn), 1);
           peerCnt--;
           console.log("peer is disconnected", userId);
         });
@@ -95,13 +98,14 @@ const start = (
       conn.on("open", () => {
         console.log("peer connected!", newUserId);
         peerCnt++;
+        conns.push(conn);
       });
       conn.on("data", (msg) => {
         console.log("peer: onData", msg);
         if (typeof msg === "object" && msg.cmd) {
           const { cmd, data } = msg;
           try {
-            peerCMD.receiveCMD(cmd, data, conn);
+            peerCMD.receiveCMD(cmd, data, conns);
           } catch (e) {
             console.error("onPeerCMDException", e);
           }
@@ -111,17 +115,19 @@ const start = (
       });
       conn.on("close", () => {
         console.log("peer is disconnected", newUserId);
+        conns.splice(conns.indexOf(conn), 1);
         peerCnt--;
       });
     });
     socket.on("disconnect", () => {
       console.log("socket is connected");
+      while (conns.shift());
     });
   });
   // peer data send/receive rules
   // {cmd: '', data: '...'}
   peer.on("connection", function (conn) {
-    peerCMD.setConnection(conn);
+    // peerCMD.setConnection(conn);
     conn.on("open", () => {});
     conn.on("data", (msg) => {
       console.log("onData", msg, typeof msg);
@@ -129,7 +135,7 @@ const start = (
       if (typeof msg === "object" && msg.cmd) {
         const { cmd, data } = msg;
         try {
-          peerCMD.receiveCMD(cmd, data, conn);
+          peerCMD.receiveCMD(cmd, data, conns);
         } catch (e) {
           console.error("onPeerCMDException", e);
         }
