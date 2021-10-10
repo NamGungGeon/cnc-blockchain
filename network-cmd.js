@@ -95,7 +95,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
-  if (this.handleCallback) this.handleCallback();
+  if (this.handleCallback) this.handleCallback(cmd, data);
 };
 PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
   console.log("sendCMD", cmd, data);
@@ -127,7 +127,7 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
     default:
       throw "unknown cmd";
   }
-  if (this.handleCallback) this.handleCallback();
+  if (this.handleCallback) this.handleCallback(cmd, data);
 };
 PeerCMD.prototype.makeCMD = function (cmd, data) {
   return { cmd, data };
