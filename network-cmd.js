@@ -34,7 +34,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
         this.broadCastToPeers((conn) =>
           conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain))
         );
-        return;
+        break;
       }
       const blockchain = Blockchain.restore(data);
       if (blockchain.isValid()) {
@@ -59,7 +59,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
             this.makeCMD(CMD_REQUEST_PTX, this.blockchain.pendingTransactions)
           )
         );
-        return;
+        break;
       }
       const pendingTransactions = data.map((tx) => {
         return Transaction.restore(tx);
@@ -107,17 +107,17 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
   console.log("recv handled", this.blockchain);
   if (this.handleCallback) this.handleCallback("receive", cmd, data);
 };
-PeerCMD.prototype.sendCMD = function (cmd, data, conns) {
+PeerCMD.prototype.sendCMD = function (cmd, data) {
   console.log("sendCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
       this.broadCastToPeers((conn) =>
-        conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null, conn))
+        conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null))
       );
       break;
     case CMD_REQUEST_PTX:
       this.broadCastToPeers((conn) =>
-        conn?.send(this.makeCMD(CMD_REQUEST_PTX, null, conn))
+        conn?.send(this.makeCMD(CMD_REQUEST_PTX, null))
       );
       break;
     case CMD_MAKE_PTX:
@@ -127,7 +127,7 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conns) {
       }
       this.blockchain.addTransaction(tx);
       this.broadCastToPeers((conn) =>
-        conn?.send(this.makeCMD(CMD_MAKE_PTX, tx, conn))
+        conn?.send(this.makeCMD(CMD_MAKE_PTX, tx))
       );
       break;
     case CMD_MAKE_BLOCK:
@@ -139,9 +139,8 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conns) {
         throw "miner is not defined";
       }
       this.broadCastToPeers((conn) =>
-        conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn))
+        conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }))
       );
-      conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn));
       break;
     default:
       throw "unknown cmd";
