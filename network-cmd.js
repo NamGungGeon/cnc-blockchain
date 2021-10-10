@@ -25,7 +25,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
       if (!data) {
-        conn.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
+        conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
         return;
       }
       const blockchain = Blockchain.restore(data);
@@ -46,7 +46,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, conn = this.conn) {
       break;
     case CMD_REQUEST_PTX:
       if (!data) {
-        conn.send(
+        conn?.send(
           this.makeCMD(CMD_REQUEST_PTX, this.blockchain.pendingTransactions)
         );
         return;
@@ -101,10 +101,10 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
   console.log("sendCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
-      conn.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null, conn));
+      conn?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, null, conn));
       break;
     case CMD_REQUEST_PTX:
-      conn.send(this.makeCMD(CMD_REQUEST_PTX, null, conn));
+      conn?.send(this.makeCMD(CMD_REQUEST_PTX, null, conn));
       break;
     case CMD_MAKE_PTX:
       const tx = data;
@@ -112,7 +112,7 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
         throw "invalid transaction data";
       }
       this.blockchain.addTransaction(tx);
-      conn.send(this.makeCMD(CMD_MAKE_PTX, tx, conn));
+      conn?.send(this.makeCMD(CMD_MAKE_PTX, tx, conn));
       break;
     case CMD_MAKE_BLOCK:
       const { block, miner } = data;
@@ -122,7 +122,7 @@ PeerCMD.prototype.sendCMD = function (cmd, data, conn = this.conn) {
       if (!miner) {
         throw "miner is not defined";
       }
-      conn.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn));
+      conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }, conn));
       break;
     default:
       throw "unknown cmd";
