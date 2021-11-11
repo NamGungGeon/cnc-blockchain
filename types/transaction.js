@@ -55,7 +55,7 @@ Transaction.prototype.calcHash = function () {
       this.toAddr +
       this.amount +
       this.nft +
-      this.timestamp
+      JSON.stringify(this.payload)
   ).toString();
 };
 Transaction.prototype.signTransaction = function (signKey) {

@@ -43,7 +43,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
           this.blockchain = blockchain;
         } else {
           //더 짧은 블록을 보낸 피어에게 가지고 있는 블록 전송
-          peer?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
+          // peer?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
           console.log("received chain is shorter(or equal) than local chain");
         }
       } else {
