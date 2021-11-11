@@ -5,6 +5,7 @@ const crypto = require("crypto");
 
 //Transaction은 보내는 지갑주소, 받을 지갑주소, 보낸 코인의 양을 포함하는 객체이다
 const Transaction = function (fromAddr, toAddr, amount, nft) {
+  this.timestamp = new Date().getTime();
   this.fromAddr = fromAddr;
   this.toAddr = toAddr;
   this.amount = amount;
@@ -14,10 +15,23 @@ const Transaction = function (fromAddr, toAddr, amount, nft) {
   //또한 data를 포함시키기 위해서는 toAddr이 반드시 receptionist의 지갑 주소여야 하며
   //정해진 수수료만큼을 포함시켜야 한다.
   this.nft = nft;
+
+  //can define custom operation
+  this.payload = null;
+};
+Transaction.prototype.setPayload = function (op, data) {
+  this.payload = {
+    op,
+    data,
+  };
+
+  return this.payload;
 };
 Transaction.restore = (json) => {
   const tx = new Transaction(json.fromAddr, json.toAddr, json.amount, json.nft);
   tx.signiture = json.signiture;
+  tx.timestamp = json.timestamp;
+  if (json.payload) tx.payload = json.payload;
   return tx;
 };
 //data is buf or string
@@ -26,7 +40,7 @@ Transaction.createTxWithNFT = async function (fromAddr, toAddr, data) {
   return new Transaction(fromAddr, toAddr, 0, nft);
 };
 Transaction.prototype.calcFee = function () {
-  if (!this.nft) {
+  if (!this.nft && !this.payload) {
     return 0;
   }
   return 0;
@@ -36,7 +50,12 @@ Transaction.prototype.calcFee = function () {
 };
 Transaction.prototype.calcHash = function () {
   return SHA256(
-    this.fromAddr + this.toAddr + this.amount + this.nft
+    this.timestamp +
+      this.fromAddr +
+      this.toAddr +
+      this.amount +
+      this.nft +
+      this.timestamp
   ).toString();
 };
 Transaction.prototype.signTransaction = function (signKey) {
