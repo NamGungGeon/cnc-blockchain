@@ -58,7 +58,7 @@ const start = (
         if (typeof msg === "object" && msg.cmd) {
           const { cmd, data } = msg;
           try {
-            peerCMD.receiveCMD(cmd, data, conns);
+            peerCMD.receiveCMD(cmd, data, conn);
             // if (cmd === CMD_REQUEST_FULLBLOCK && data) {
             //   const newBlock =
             //     blockchain.minePendingTransactions("test addr");
@@ -113,7 +113,7 @@ const start = (
       if (typeof msg === "object" && msg.cmd) {
         const { cmd, data } = msg;
         try {
-          peerCMD.receiveCMD(cmd, data, conns);
+          peerCMD.receiveCMD(cmd, data, conn);
         } catch (e) {
           console.error("onPeerCMDException", e);
         }

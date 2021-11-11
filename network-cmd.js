@@ -26,7 +26,7 @@ PeerCMD.prototype.broadCastToPeers = function (handle = (conn) => {}) {
     this.conns.forEach(handle);
   }
 };
-PeerCMD.prototype.receiveCMD = function (cmd, data) {
+PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
   console.log("receiveCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
@@ -38,17 +38,17 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
       }
       const blockchain = Blockchain.restore(data);
       if (blockchain.isValid()) {
+        //가장 긴 블록 선택
         if (blockchain.chain.length > this.blockchain.chain.length) {
           //set property of blockchain to received blockchain (overwrite)
-          this.blockchain.chain = blockchain.chain;
-          this.blockchain.difficulty = blockchain.difficulty;
-          this.blockchain.pendingTransactions = blockchain.pendingTransactions;
-          this.blockchain.miningRewrad = blockchain.miningRewrad;
+          this.blockchain = blockchain;
         } else {
-          //가장 긴 블록 선택
+          //더 짧은 블록을 보낸 피어에게 가지고 있는 블록 전송
+          peer?.send(this.makeCMD(CMD_REQUEST_FULLBLOCK, this.blockchain));
           console.log("received chain is shorter(or equal) than local chain");
         }
       } else {
+        peer?.disconnect();
         throw "invalid blockchain is received";
       }
       break;
@@ -66,6 +66,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
       });
       const txValid = pendingTransactions.every((tx) => tx.isValid());
       if (!txValid) {
+        peer?.disconnect();
         throw "올바르지 않은 트랜잭션이 포함되어 있습니다";
       }
 
@@ -73,6 +74,11 @@ PeerCMD.prototype.receiveCMD = function (cmd, data) {
       break;
     case CMD_MAKE_PTX:
       const tx = Transaction.restore(data);
+      if (!tx.isValid()) {
+        //invalid transaction은 즉시 연결을 끊는다
+        peer?.disconnect();
+        throw "무효한 트랜잭션입니다";
+      }
       this.blockchain.addTransaction(tx);
       break;
     case CMD_MAKE_BLOCK:
