@@ -1,5 +1,4 @@
-const blockchain = require(".");
-const { Block, Blockchain, Transaction } = require("./blockchain");
+const { Block, Blockchain, Transaction } = require("./types");
 
 const CMD_REQUEST_FULLBLOCK = "request-fullblock";
 const CMD_REQUEST_PTX = "request-penddingtx";

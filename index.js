@@ -1,5 +1,5 @@
 module.exports = {
-  ...require("./blockchain"),
+  ...require("./types/index"),
   ...require("./wallets"),
   ...require("./keygen"),
   ...require("./network"),

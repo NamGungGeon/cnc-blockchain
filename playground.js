@@ -1,5 +1,6 @@
 const readline = require("readline");
-const { Blockchain, Transaction } = require("./blockchain");
+const { Block, Blockchain, Transaction } = require("./types");
+
 const { generateKey, keys } = require("./keygen");
 const fs = require("fs");
 const wallets = require("./wallets");

@@ -1,4 +1,5 @@
-const { Blockchain, Transaction } = require("./blockchain");
+const { Block, Blockchain, Transaction } = require("./types");
+
 const {
   PeerCMD,
   CMD_REQUEST_FULLBLOCK,
