@@ -4,13 +4,151 @@
 or
 `yarn add cnc-blockchain`
 
-# Prerequisite for tutorial
+# Usage
+
+### Join cnc-blockchain network
+
+```
+const cncBlockchain= require('cnc-blockchain');
+
+const network= cncBlockchain.joinNetwork(ready=>{
+  if(ready){
+    //network is ready!
+    //...
+  }
+});
+```
+
+After joining network, you can use cnc-blockchain-network's functions!
+
+(also automatically request and update blockchain data)
+
+### Make new transaction
+
+```
+const {joinNetwork, Transacton, generateKey, CMD_MAKE_PTX}= require('cnc-blockchain);
+
+const network= cncBlockchain.joinNetwork(ready=>{
+  if(ready){
+    //network is ready!
+
+    const user1= generateKey();
+    const user2= generateKey();
+
+    //This tx means user1 send 0 coin to user2
+    const tx= new Transaction(user1.getPublic('hex'), user2.getPublic('hex'), 0);
+
+    //sign to tx (sender must sign transaction)
+    tx.signTransaction(user1);
+
+    //submit tx to blockchain network
+    network.sendCMD(CMD_MAKE_PTX, tx);
+  }
+});
+```
+
+You create transaction(user1 send 0 coin to user2) and submit transaction to blockchain network.
+
+Be aware this transaction is now pending state(waiting for allowing validation by users in network).
+
+How to transform pending transaction to allowed transaction (on block)?
+
+### Mine(Create) new block
+
+For transform pending transaction to real-valid transaction, you should mining(create) new block including that transaction.
+
+Only on-block transaction is allowed as real-data.
+
+```
+const {joinNetwork, Transacton, generateKey, CMD_MAKE_PTX, CMD_MAKE_BLOCK}= require('cnc-blockchain);
+
+const network= cncBlockchain.joinNetwork(ready=>{
+  if(ready){
+    //network is ready!
+
+    const user1= generateKey();
+    const user2= generateKey();
+
+    //This tx means user1 send 0 coin to user2
+    const tx= new Transaction(user1.getPublic('hex'), user2.getPublic('hex'), 0);
+
+    //sign to tx (sender must sign transaction)
+    tx.signTransaction(user1);
+
+    //submit tx to blockchain network
+    network.sendCMD(CMD_MAKE_PTX, tx);
+
+    // start mining block
+    // miner is user1 (mining reward is given to user1)
+    const newBlock= network.blockchain.mingPendingTransactions(user1.getPublic('hex'));
+
+    //ok, new block is mined
+    //submit new block and miner info to network
+    network.sendCMD(CMD_MAKE_BLOCK, {block, miner: user1.getPublic('hex')});
+  }
+});
+```
+
+After sending new block data and network users are received it, your block will be allowed or disallowed (in case of submiting invalid block).
+
+if allowed, your transaction is confirmed and mining reward is given.
+
+### Customize usage
+
+You can use cnc-blockchain as your own requirements.
+
+Transaction of cnc-blockchain have payload object.
+
+```
+//payload structure
+{
+  "op": "...",
+  "data": "..."
+}
+```
+
+Let's make some simple e-mail application
+
+```
+//...
+const user1= generateKey();
+const user2= generateKey();
+
+const tx= new Transaction(user1.getPublic('hex'), user2.getPublic('hex'), 0);
+
+//add payload
+tx.setPayload('message', 'hi there!');
+
+//sign to tx (sender must sign transaction)
+tx.signTransaction(user1);
+//...
+```
+
+This transaction means user1 sends message `hi there!` to user2.
+
+After new block including this transaction is mined, user2 can read `hi there!` message.
+
+You can check this example of e-mail application at [here](http://3.37.53.134:3005/mailbox)
+
+# Tutorial with playground.js for comprehend cnc-blockchain
+
+### Prerequisite for tutorial
 
 1. install [nodejs](https://nodejs.org/ko/)
 2. git clone "https://github.com/NamGungGeon/cnc-blockchain" [path_you_want]
-3. after moving to [path-you-want], write `npm install` or `yarn` into command line for installing required modules
+3. after moving to [path-you-want] as using `cd` command, write `npm install` or `yarn` into command line for installing required modules.
 
-# Tutorial with playground.js
+### <span style="color:#f03c15">Note</span>
+
+Tutorial is executed in nodejs runtime.
+
+For nodejs runtime(not web browser), use `peerjs-nodejs` library instead of `peerjs`.
+
+But `peerjs-nodejs` invoke some exception when connection time is long.
+
+That exception is not thrown in web browser environment, so calm down if exception occur.
+
+### Are you ready?
 
 1. write `node playground.js` or `npm run playground` or `yarn playground`
 
