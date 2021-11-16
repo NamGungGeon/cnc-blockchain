@@ -1,3 +1,4 @@
+const { default: axios } = require("axios");
 const { Block, Blockchain, Transaction } = require("./types");
 
 const CMD_REQUEST_FULLBLOCK = "request-fullblock";
@@ -25,7 +26,7 @@ PeerCMD.prototype.broadCastToPeers = function (handle = (conn) => {}) {
     this.conns.forEach(handle);
   }
 };
-PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
+PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
   console.log("receiveCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
@@ -63,13 +64,21 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
       const pendingTransactions = data.map((tx) => {
         return Transaction.restore(tx);
       });
-      const txValid = pendingTransactions.every((tx) => tx.isValid());
-      if (!txValid) {
-        peer?.disconnect();
+      await Promise.all(
+        pendingTransactions.map(async (tx) => {
+          if (
+            !this.blockchain.pendingTransactions.find(
+              (ptx) => ptx.signiture === tx.signiture
+            )
+          ) {
+            await this.blockchain.addTransaction(tx);
+          }
+        })
+      ).catch((e) => {
+        console.error(e);
         throw "올바르지 않은 트랜잭션이 포함되어 있습니다";
-      }
+      });
 
-      this.blockchain.pendingTransactions = pendingTransactions;
       break;
     case CMD_MAKE_PTX:
       const tx = Transaction.restore(data);
@@ -78,7 +87,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
         peer?.disconnect();
         throw "무효한 트랜잭션입니다";
       }
-      this.blockchain.addTransaction(tx);
+      await this.blockchain.addTransaction(tx);
       break;
     case CMD_MAKE_BLOCK:
       const block = Block.restore(data.block);
@@ -110,7 +119,7 @@ PeerCMD.prototype.receiveCMD = function (cmd, data, peer) {
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
-  if (this.handleCallback) this.handleCallback("receive", cmd, data);
+  if (this.handleCallbaclk) this.handleCallback("receive", cmd, data);
 };
 PeerCMD.prototype.sendCMD = function (cmd, data) {
   console.log("sendCMD", cmd, data);
@@ -130,7 +139,7 @@ PeerCMD.prototype.sendCMD = function (cmd, data) {
       if (!(tx instanceof Transaction)) {
         throw "invalid transaction data";
       }
-      this.blockchain.addTransaction(tx);
+      await this.blockchain.addTransaction(tx);
       this.broadCastToPeers((conn) =>
         conn?.send(this.makeCMD(CMD_MAKE_PTX, tx))
       );

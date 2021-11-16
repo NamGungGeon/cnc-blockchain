@@ -175,7 +175,7 @@ Blockchain.prototype.minePendingTransactionsAsync = function (
     }
   });
 };
-Blockchain.prototype.addTransaction = function (transaction) {
+Blockchain.prototype.addTransaction = async function (transaction) {
   if (!transaction.toAddr || !transaction.fromAddr) {
     throw "보내는 사람 정보와 받는 사람 정보가 모두 존재해야 합니다";
   }
@@ -198,12 +198,21 @@ Blockchain.prototype.addTransaction = function (transaction) {
     if (owner && transaction.fromAddr !== owner) {
       throw "해당 토큰의 소유자가 아닙니다";
     }
-  }
 
-  if (transaction.nft) {
+    await axios
+      .request({
+        url: `http://3.37.53.134:3004/files/${transaction.nft}`,
+        method: "GET",
+      })
+      .catch((e) => {
+        console.error(e);
+        throw "서버에 해당 NFT에 해당하는 파일이 없습니다";
+      });
+
     //보내는 데이터가 있는 경우 해당 데이터에서 계산된 수수료를 amount로 지정
     transaction.amount = transaction.calcFee();
   }
+
   //pendingTranscation에 포함된 거래내역에 대해 잔액 변동률 계산
   // let balanceDeltaFromPendingTransactions = 0;
   // this.pendingTransactions.map((tx) => {

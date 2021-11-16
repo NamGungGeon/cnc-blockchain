@@ -2,6 +2,7 @@ const { SHA256 } = require("crypto-js");
 const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
 const crypto = require("crypto");
+const axios = require("axios");
 
 //Transaction은 보내는 지갑주소, 받을 지갑주소, 보낸 코인의 양을 포함하는 객체이다
 const Transaction = function (fromAddr, toAddr, amount, nft) {
@@ -65,7 +66,7 @@ Transaction.prototype.signTransaction = function (signKey) {
   const hashTranscation = this.calcHash();
   this.signiture = signKey.sign(hashTranscation, "base64").toDER("hex");
 };
-Transaction.prototype.isValid = function () {
+Transaction.prototype.isValid = async function () {
   //채굴 보상을 수여받는 경우, fromAddr은 null이다
   // if (!this.fromAddr) return true;
 

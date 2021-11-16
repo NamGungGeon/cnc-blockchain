@@ -22,6 +22,7 @@
     "build": "webpack"
   },
   "dependencies": {
+    "axios": "^0.24.0",
     "crypto-js": "^4.1.1",
     "elliptic": "^6.5.4",
     "peerjs-nodejs": "^1.1.3",

@@ -21,7 +21,7 @@ const exec = async () => {
     fs.readFileSync("package.json")
   );
   tx.signTransaction(k1Key);
-  cncCoin.addTransaction(tx);
+  await cncCoin.addTransaction(tx);
   console.log(cncCoin.pendingTransactions);
   cncCoin.minePendingTransactions(k1Public);
 
@@ -34,7 +34,7 @@ const exec = async () => {
 
   //throw exception
   //other person hash pacakge.json's ownership
-  cncCoin.addTransaction(tx2);
+  await cncCoin.addTransaction(tx2);
 
   console.log(cncCoin.pendingTransactions);
   console.log(cncCoin.chain);
