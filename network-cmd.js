@@ -121,7 +121,7 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
   console.log("recv handled", this.blockchain);
   if (this.handleCallbaclk) this.handleCallback("receive", cmd, data);
 };
-PeerCMD.prototype.sendCMD = function (cmd, data) {
+PeerCMD.prototype.sendCMD = async function (cmd, data) {
   console.log("sendCMD", cmd, data);
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
