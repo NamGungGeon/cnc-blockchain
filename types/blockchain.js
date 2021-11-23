@@ -1,5 +1,7 @@
 const wallets = require("../wallets");
 
+const axios = require("axios");
+
 const Block = require("./block");
 const Transaction = require("./transaction");
 
