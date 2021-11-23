@@ -8,7 +8,7 @@ interface Payload {
   op: string;
   data: any;
 }
-class Transaction {
+export default class Transaction {
   timestamp: number = new Date().getTime();
   fromAddr: string | null;
   toAddr: string;
