@@ -2,6 +2,7 @@ const wallets = require("../wallets");
 
 const Block = require("./block");
 const Transaction = require("./transaction");
+const axios = require("axios");
 
 //Blockchain
 const Blockchain = function () {
@@ -279,8 +280,8 @@ Blockchain.prototype.getBalanceOfAddress = function (addr) {
 //   this.chain.push(newBlock);
 // };
 Blockchain.prototype.createGenesisBlock = function () {
-  //번호 0번, 이전 해시 "0", data를 "GenesisBlock"으로 임의로 지정
-  return new Block(1633083312156, "GenesisBlock", "");
+  //이전 해시 "GenesisBlock", tx를 []로 임의로 지정
+  return new Block(1633083312156, [], "GenesisBlock");
 };
 Blockchain.prototype.getLatestBlock = function () {
   return this.chain[this.chain.length - 1];
