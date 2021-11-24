@@ -15,7 +15,7 @@
     "url": "https://github.com/NamGungGeon/cnc-blockchain.git"
   },
   "version": "2.0.2-local",
-  "main": "index.js",
+  "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
     "playground": "node playground.js",
