@@ -19,7 +19,7 @@
   "license": "MIT",
   "scripts": {
     "playground": "node playground.js",
-    "build": "webpack"
+    "start": "tsc && node dist/index.js -start"
   },
   "dependencies": {
     "axios": "^0.24.0",
