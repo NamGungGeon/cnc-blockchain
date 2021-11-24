@@ -4,14 +4,14 @@ import Transaction from "./transaction";
 //Block
 export default class Block {
   timestamp: number;
-  transactions: Array<Transaction> | string;
+  transactions: Array<Transaction>;
   prevHash: string = "";
   nonce: number = 0;
   hash: string = "";
 
   constructor(
     timestamp: number,
-    transactions: Array<Transaction> | string,
+    transactions: Array<Transaction>,
     prevHash: string = ""
   ) {
     this.timestamp = timestamp;
@@ -24,9 +24,7 @@ export default class Block {
   static restore(json: Block) {
     const block = new Block(
       json.timestamp,
-      Array.isArray(json.transactions)
-        ? json.transactions.map((tx) => Transaction.restore(tx))
-        : "genesisBlock",
+      json.transactions.map((tx) => Transaction.restore(tx)),
       json.prevHash
     );
 
