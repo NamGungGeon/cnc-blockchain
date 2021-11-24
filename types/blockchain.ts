@@ -8,7 +8,7 @@ export default class Blockchain {
   chain: Array<Block> = [];
   difficulty: number = 2;
   pendingTransactions: Array<Transaction> = [];
-  miningRewrad = 100;
+  miningReward = 100;
 
   attachNewBlock(block: Block) {
     //check block transactions are valid
@@ -20,7 +20,7 @@ export default class Blockchain {
     block.transactions.map((tx: Transaction, idx: number) => {
       const { fromAddr, toAddr, amount, nft } = tx;
       if (idx === 0) {
-        if (fromAddr !== null && amount !== this.miningRewrad) {
+        if (fromAddr !== null && amount !== this.miningReward) {
           exception = "채굴 보상 정보가 무효합니다";
         }
         return;
@@ -117,7 +117,7 @@ export default class Blockchain {
     this.attachNewBlock(block);
 
     this.pendingTransactions = [
-      new Transaction(null, rewardAddress, this.miningRewrad),
+      new Transaction(null, rewardAddress, this.miningReward),
     ];
 
     return block;
@@ -145,7 +145,7 @@ export default class Blockchain {
         });
 
         this.pendingTransactions = [
-          new Transaction(null, rewardAddress, this.miningRewrad),
+          new Transaction(null, rewardAddress, this.miningReward),
           ...this.pendingTransactions,
         ];
         onBlockMined(block);
@@ -289,7 +289,7 @@ export default class Blockchain {
     blockchain.pendingTransactions = json.pendingTransactions.map((tx) =>
       Transaction.restore(tx)
     );
-    blockchain.miningRewrad = json.miningRewrad;
+    blockchain.miningReward = json.miningReward;
     return blockchain;
   }
 }
