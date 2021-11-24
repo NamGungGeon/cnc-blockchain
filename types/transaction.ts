@@ -21,7 +21,7 @@ export default class Transaction {
     fromAddr: string | null,
     toAddr: string,
     amount: number,
-    nft: string | null
+    nft: string | null = null
   ) {
     this.fromAddr = fromAddr;
     this.toAddr = toAddr;
