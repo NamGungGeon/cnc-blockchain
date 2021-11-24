@@ -29,11 +29,12 @@ export default class Transaction {
     this.nft = nft;
   }
 
-  setPayload(op: string, data: any) {
+  setPayload(op: string, data: any): Payload {
     this.payload = {
       op,
       data,
     };
+    return this.payload;
   }
 
   static restore(json: Transaction): Transaction {
@@ -72,16 +73,23 @@ export default class Transaction {
     if (signKey.getPublic("hex") !== this.fromAddr) {
       throw "다른 사람의 지갑 정보를 사용하여 트랜잭션에 사인할 수 없습니다";
     }
+
     const hashTranscation: string = this.calcHash();
     this.signiture = signKey.sign(hashTranscation, "base64").toDER("hex");
   }
 
-  async isValid(): Promise<Boolean> {
+  isValid(): Boolean {
     //채굴 보상을 수여받는 경우, fromAddr은 null이다
     // if (!this.fromAddr) return true;
 
-    if (this.fromAddr === null) {
+    if (!this.fromAddr) {
       throw "송신자 정보가 없습니다";
+    }
+    if (!this.toAddr) {
+      throw "수신자 정보가 없습니다";
+    }
+    if (this.amount < 0) {
+      throw "음수 금액은 지정할 수 없습니다";
     }
     if (!this.signiture) {
       throw "서명되지 않은 트랜잭션입니다";
