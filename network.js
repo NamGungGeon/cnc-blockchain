@@ -6,7 +6,11 @@ const {
   CMD_REQUEST_PTX,
   CMD_MAKE_BLOCK,
   CMD_MAKE_PTX,
+  CMD_RECV_NEW_PROBLEM,
+  CMD_SEND_ANSWER,
+  CMD_RECV_ANSWER_VALID,
 } = require("./network-cmd");
+const { joinNetwork } = require(".");
 
 const blockchain = new Blockchain();
 const conns = [];
@@ -40,6 +44,22 @@ const start = (
       // initSocket(socket, roomId);
       socket.emit("join-room", roomId, myId);
     });
+    peerCMD.customActions.send[CMD_SEND_ANSWER] = (answer) => {
+      socket.emit(CMD_SEND_ANSWER, answer);
+    };
+    peerCMD.customActions.recv[CMD_RECV_NEW_PROBLEM] = (problemImage) => {
+      //some action
+    };
+    peerCMD.customActions.recv[CMD_RECV_ANSWER_VALID] = (result) => {
+      //some action
+    };
+    socket.on(CMD_RECV_NEW_PROBLEM, (problemImage) => {
+      peerCMD.receiveCMD(CMD_RECV_NEW_PROBLEM, problemImage);
+    });
+    socket.on(CMD_RECV_ANSWER_VALID, (result) => {
+      peerCMD.receiveCMD(CMD_RECV_ANSWER_VALID, result);
+    });
+
     const connectPeer = (userId) => {
       if (userId === myId) return;
 
@@ -95,7 +115,7 @@ const start = (
       users.forEach(connectPeer);
     });
     socket.on("user-connected", (newUserId) => {
-      console.log("on user-connected");
+      console.log("on user-connected", newUserId);
       connectPeer(newUserId);
     });
     socket.on("disconnect", () => {
@@ -141,4 +161,6 @@ module.exports = {
   CMD_REQUEST_PTX,
   CMD_MAKE_BLOCK,
   CMD_MAKE_PTX,
+  CMD_RECV_NEW_PROBLEM,
+  CMD_SEND_ANSWER,
 };

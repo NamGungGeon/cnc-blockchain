@@ -6,12 +6,22 @@ const CMD_REQUEST_PTX = "request-penddingtx";
 const CMD_MAKE_PTX = "make-penddingtx";
 const CMD_MAKE_BLOCK = "make-block";
 
+const CMD_RECV_NEW_PROBLEM = "NEW_PROBLEM";
+const CMD_SEND_ANSWER = "ANSWER";
+const CMD_RECV_ANSWER_VALID = "ANSWER_VALID";
+
 const PeerCMD = function (blockchain, conns) {
   if (!blockchain) {
     throw "blockchain is null";
   }
   this.conns = conns;
   this.blockchain = blockchain;
+
+  this.customActions = {
+    send: {},
+    recv: {},
+  };
+  Object.seal(this.customActions);
 };
 
 // PeerCMD.prototype.setConnection = function (conn) {
@@ -116,10 +126,15 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
       this.blockchain.attachNewBlock(block);
       break;
     default:
+      if (this.customActions.recv[cmd]) {
+        this.customActions.recv[cmd](data);
+        break;
+      }
+
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
-  if (this.handleCallbaclk) this.handleCallback("receive", cmd, data);
+  if (this.handleCallback) this.handleCallback("receive", cmd, data);
 };
 PeerCMD.prototype.sendCMD = async function (cmd, data) {
   console.log("sendCMD", cmd, data);
@@ -157,6 +172,10 @@ PeerCMD.prototype.sendCMD = async function (cmd, data) {
       );
       break;
     default:
+      if (this.customActions.send[cmd]) {
+        this.customActions.send[cmd](data);
+        break;
+      }
       throw "unknown cmd";
   }
   if (this.handleCallback) this.handleCallback("send", cmd, data);
@@ -171,4 +190,6 @@ module.exports = {
   CMD_REQUEST_PTX,
   CMD_MAKE_BLOCK,
   CMD_MAKE_PTX,
+  CMD_RECV_NEW_PROBLEM,
+  CMD_SEND_ANSWER,
 };
