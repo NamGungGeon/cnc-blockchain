@@ -8,9 +8,9 @@ const {
   CMD_MAKE_PTX,
   CMD_RECV_NEW_PROBLEM,
   CMD_SEND_ANSWER,
-  CMD_RECV_ANSWER_VALID,
+  CMD_RECV_MY_HASH,
+  CMD_RECV_REAL_HASH,
 } = require("./network-cmd");
-const { joinNetwork } = require(".");
 
 const blockchain = new Blockchain();
 const conns = [];
@@ -48,16 +48,19 @@ const start = (
       socket.emit(CMD_SEND_ANSWER, answer);
     };
     peerCMD.customActions.recv[CMD_RECV_NEW_PROBLEM] = (problemImage) => {
-      //some action
+      //show problemImage to user
+      console.log("new problem is received!");
     };
-    peerCMD.customActions.recv[CMD_RECV_ANSWER_VALID] = (result) => {
-      //some action
-    };
+
+    //enroll socket event
     socket.on(CMD_RECV_NEW_PROBLEM, (problemImage) => {
       peerCMD.receiveCMD(CMD_RECV_NEW_PROBLEM, problemImage);
     });
-    socket.on(CMD_RECV_ANSWER_VALID, (result) => {
-      peerCMD.receiveCMD(CMD_RECV_ANSWER_VALID, result);
+    socket.on(CMD_RECV_MY_HASH, (result) => {
+      peerCMD.receiveCMD(CMD_RECV_MY_HASH, result);
+    });
+    socket.on(CMD_RECV_REAL_HASH, (result) => {
+      peerCMD.receiveCMD(CMD_RECV_REAL_HASH, result);
     });
 
     const connectPeer = (userId) => {
