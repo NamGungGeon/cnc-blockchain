@@ -34,8 +34,8 @@ export default class Blockchain {
         }
       }
       //잔고 검사
-      if (amount) {
-        if (this.getBalanceOfAddress(fromAddr as string) - amount < 0) {
+      if (fromAddr && amount) {
+        if (this.getBalanceOfAddress(fromAddr as string) > amount) {
           throw "잔액보다 더 많이 보낼 수 없습니다";
         }
       }
@@ -50,7 +50,7 @@ export default class Blockchain {
         (tx) => tx.calcHash() === ptxHash
       );
       //현재 ptx가 블록에 포함된 tx일 경우 해당 ptx삭제
-      return ptxInBlock;
+      return !ptxInBlock;
     });
   }
 
@@ -173,9 +173,9 @@ export default class Blockchain {
     }
 
     if (
-      this.getBalanceOfAddress(transaction.fromAddr as string) -
-        transaction.amount <
-      0
+      transaction.fromAddr &&
+      this.getBalanceOfAddress(transaction.fromAddr as string) <
+        transaction.amount
     ) {
       throw "잔액보다 더 많이 보낼 수 없습니다";
     }

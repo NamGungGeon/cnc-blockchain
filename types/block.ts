@@ -46,6 +46,13 @@ export default class Block {
     ).toString();
   }
 
+  _mining(key: string): Block {
+    this.key = key;
+    this.hash = this.calcHash();
+
+    return this;
+  }
+
   mining(difficulty: number): Block {
     const start = new Date();
     //difficulty개의 0으로 시작하는 hash가 발생될 때 까지 해시를 반복한다
@@ -94,10 +101,10 @@ export default class Block {
       console.log("prevHash 불일치");
       return false;
     }
-    if (!this.isValidNonce(difficulty)) {
-      console.log("nonce 불일치");
-      return false;
-    }
+    // if (!this.isValidNonce(difficulty)) {
+    //   console.log("nonce 불일치");
+    //   return false;
+    // }
     if (!this.hasValidTransactions()) {
       return false;
     }

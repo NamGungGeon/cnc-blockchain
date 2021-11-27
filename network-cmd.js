@@ -46,7 +46,12 @@ PeerCMD.prototype.broadCastToPeers = function (handle = (conn) => {}) {
   }
 };
 PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
-  console.log("receiveCMD", cmd, data);
+  if (cmd === CMD_RECV_NEW_PROBLEM) {
+    console.log("receiveCMD", cmd);
+  } else {
+    console.log("receiveCMD", cmd, data);
+  }
+
   switch (cmd) {
     case CMD_REQUEST_FULLBLOCK:
       if (!data) {
@@ -56,14 +61,20 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
         break;
       }
       if (!this.currentBlockHashKey) {
-        throw "아직 최신 블록의 key가 로드되지 않았습니다";
+        console.log("아직 최신 블록의 key가 로드되지 않았습니다");
+        //잠시 후 다시 시도
+        const receiveCMD = this.receiveCMD;
+        setTimeout(() => receiveCMD(cmd, data, peer));
+        return;
       }
       const blockchain = Blockchain.restore(data);
       //POB로 변경 후 블록 선택 방식 변경
       if (blockchain.isValid()) {
         if (blockchain.getLatestBlock().key !== this.currentBlockHashKey) {
           //최신 블록이 아님
-          throw "최신 블록의 key값이 아닙니다";
+          throw `최신 블록의 key값이 아닙니다 (${
+            blockchain.getLatestBlock().key
+          },${this.currentBlockHashKey})`;
         }
         if (blockchain.chain.length > this.blockchain.chain.length) {
           //가장 긴 블록 선택
@@ -102,7 +113,7 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
         })
       ).catch((e) => {
         console.error(e);
-        peer?.disconnect();
+        // peer?.disconnect();
         throw "올바르지 않은 트랜잭션이 포함되어 있습니다";
       });
 
@@ -111,7 +122,7 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
       const tx = Transaction.restore(data);
       if (!tx.isValid()) {
         //invalid transaction은 즉시 연결을 끊는다
-        peer?.disconnect();
+        // peer?.disconnect();
         throw "무효한 트랜잭션입니다";
       }
       await this.blockchain.addTransaction(tx);
@@ -124,34 +135,50 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
         this.pendingBlocks.find(({ miner: blockMiner }) => blockMiner === miner)
       ) {
         //동일한 채굴자로부터 여러 개의 블록이 제출됨
-        peer?.disconnect();
-        throw "블록은 한 번만 제출할 수 있습니다 (이상 동작 유저와 연결 해제)";
+        // peer?.disconnect();
+        throw "블록은 한 번만 제출할 수 있습니다 ";
       }
       //new block is pending state
       //waiting CMD_RECV_REAL_HASH
-      this.pendingBlocks.push({ block, miner });
+      if (block.hasValidTransactions())
+        this.pendingBlocks.push({ block, miner });
       break;
     case CMD_RECV_MY_HASH:
       //make new block and propagate it
       const myHash = data;
       //use myHash when you mine new block
-      //no ops here
+      const myBlock = new Block(
+        new Date().getTime(),
+        this.blockchain.pendingTransactions,
+        this.blockchain.getLatestBlock().hash
+      );
+      myBlock._mining(myHash);
+
+      this.sendCMD(CMD_MAKE_BLOCK, {
+        block: myBlock,
+        miner: this.keyPair.getPublic("hex"),
+      });
       break;
     case CMD_RECV_REAL_HASH:
+      console.log(CMD_RECV_REAL_HASH, this.pendingBlocks);
       //check pendingBlocks and select valid block
-      const realHash = data;
+      this.currentBlockHashKey = data;
       const pendingBlocks = this.pendingBlocks.filter(({ block }) => {
-        return block.key === realHash;
+        return block.key === this.currentBlockHashKey;
       });
       //첫 번째 블록부터 차례로 블록체인에 붙이기를 시도한다.
       for (let i = 0; i < pendingBlocks.length; i++) {
         const { block, miner } = pendingBlocks[i];
+        console.log("attention!!", this.blockchain.pendingTransactions, block);
         try {
           this.blockchain.attachNewBlock(block);
           this.blockchain.pendingTransactions = [
-            new Transaction(null, miner, this.blockchain.miningRewrad),
+            new Transaction(null, miner, this.blockchain.miningReward),
             ...this.blockchain.pendingTransactions,
           ];
+          console.log(
+            new Transaction(null, miner, this.blockchain.miningReward)
+          );
           //블록 붙이기에 성공하면 루프를 종료한다
           break;
         } catch (e) {
@@ -166,7 +193,7 @@ PeerCMD.prototype.receiveCMD = async function (cmd, data, peer) {
         break;
       }
 
-      peer?.disconnect();
+      // peer?.disconnect();
       throw "unknown cmd";
   }
   console.log("recv handled", this.blockchain);
@@ -196,13 +223,16 @@ PeerCMD.prototype.sendCMD = async function (cmd, data) {
       );
       break;
     case CMD_MAKE_BLOCK:
-      const { block, miner } = data;
+      const { block: _block, miner } = data;
+      console.log(CMD_MAKE_BLOCK, data);
+      const block = Block.restore(_block);
       if (!(block instanceof Block)) {
         throw "invalid block data";
       }
       if (!miner) {
         throw "miner is not defined";
       }
+      console.log("pendingBlocks", this.pendingBlocks);
       this.pendingBlocks.push({ block, miner });
       this.broadCastToPeers((conn) =>
         conn?.send(this.makeCMD(CMD_MAKE_BLOCK, { block, miner }))
@@ -229,4 +259,6 @@ module.exports = {
   CMD_MAKE_PTX,
   CMD_RECV_NEW_PROBLEM,
   CMD_SEND_ANSWER,
+  CMD_RECV_MY_HASH,
+  CMD_RECV_REAL_HASH,
 };
