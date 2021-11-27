@@ -9,6 +9,9 @@ export default class Block {
   nonce: number = 0;
   hash: string = "";
 
+  //for BOP(Brain Of Proof)
+  key: string = "";
+
   constructor(
     timestamp: number,
     transactions: Array<Transaction>,
@@ -17,7 +20,6 @@ export default class Block {
     this.timestamp = timestamp;
     this.transactions = transactions;
     this.prevHash = prevHash;
-    this.nonce = 0;
     this.hash = this.calcHash();
   }
 
@@ -32,6 +34,7 @@ export default class Block {
     block.prevHash = json.prevHash;
     block.hash = json.hash;
     block.nonce = json.nonce;
+    block.key = json.key;
 
     return block;
   }
@@ -39,8 +42,15 @@ export default class Block {
   calcHash(): string {
     const txString = JSON.stringify(this.transactions);
     return SHA256(
-      this.prevHash + this.timestamp + txString + this.nonce
+      this.prevHash + this.timestamp + txString + this.nonce + this.key
     ).toString();
+  }
+
+  _mining(key: string): Block {
+    this.key = key;
+    this.hash = this.calcHash();
+
+    return this;
   }
 
   mining(difficulty: number): Block {
@@ -91,10 +101,10 @@ export default class Block {
       console.log("prevHash 불일치");
       return false;
     }
-    if (!this.isValidNonce(difficulty)) {
-      console.log("nonce 불일치");
-      return false;
-    }
+    // if (!this.isValidNonce(difficulty)) {
+    //   console.log("nonce 불일치");
+    //   return false;
+    // }
     if (!this.hasValidTransactions()) {
       return false;
     }
@@ -108,10 +118,15 @@ export default class Block {
     );
   }
   hasValidTransactions(): boolean {
-    if (typeof this.transactions === "string") return true;
-
     if (this.transactions.length === 0) return true;
 
+    this.transactions.forEach((tx, idx) => {
+      for (let i = idx + 1; i < this.transactions.length; i++) {
+        if (tx.calcHash() === this.transactions[i].calcHash()) {
+          throw "한 블록에 한 사람이 여러 번 거래를 등록할 수 없습니다";
+        }
+      }
+    });
     return this.transactions.every((tx, idx) => {
       if (idx === 0 && !tx.fromAddr && tx.toAddr) {
         //채굴 보상은 반드시 0번에 위치한다

@@ -1,4 +1,5 @@
 const { Block, Blockchain, Transaction } = require("./types");
+const { generateKey } = require("./keygen");
 
 const {
   PeerCMD,
@@ -8,15 +9,16 @@ const {
   CMD_MAKE_PTX,
   CMD_RECV_NEW_PROBLEM,
   CMD_SEND_ANSWER,
-  CMD_RECV_ANSWER_VALID,
+  CMD_RECV_MY_HASH,
+  CMD_RECV_REAL_HASH,
 } = require("./network-cmd");
-const { joinNetwork } = require(".");
 
 const blockchain = new Blockchain();
 const conns = [];
 const peerCMD = new PeerCMD(blockchain, conns);
+peerCMD.keyPair = generateKey();
 peerCMD.setCallback(() => {
-  console.log("handled", peerCMD.blockchain);
+  // console.log("handled", peerCMD.blockchain);
 });
 let peerCnt = 0;
 
@@ -44,20 +46,34 @@ const start = (
       // initSocket(socket, roomId);
       socket.emit("join-room", roomId, myId);
     });
+    let isSubmitAnswer = false;
     peerCMD.customActions.send[CMD_SEND_ANSWER] = (answer) => {
+      if (isSubmitAnswer) {
+        console.error("이미 해당 문제에 대한 답을 제출했습니다");
+        return;
+      }
+      isSubmitAnswer = true;
       socket.emit(CMD_SEND_ANSWER, answer);
     };
+    // setInterval(() => {
+    //   peerCMD.sendCMD(CMD_SEND_ANSWER, 1);
+    // }, 1000);
     peerCMD.customActions.recv[CMD_RECV_NEW_PROBLEM] = (problemImage) => {
-      //some action
+      //show problemImage to user
+      isSubmitAnswer = false;
+      console.log("new problem is received!");
     };
-    peerCMD.customActions.recv[CMD_RECV_ANSWER_VALID] = (result) => {
-      //some action
-    };
+
+    //enroll socket event
     socket.on(CMD_RECV_NEW_PROBLEM, (problemImage) => {
       peerCMD.receiveCMD(CMD_RECV_NEW_PROBLEM, problemImage);
     });
-    socket.on(CMD_RECV_ANSWER_VALID, (result) => {
-      peerCMD.receiveCMD(CMD_RECV_ANSWER_VALID, result);
+    socket.on(CMD_RECV_MY_HASH, (result) => {
+      console.log("CMD_RECV_MY_HASH", result);
+      peerCMD.receiveCMD(CMD_RECV_MY_HASH, result);
+    });
+    socket.on(CMD_RECV_REAL_HASH, (result) => {
+      peerCMD.receiveCMD(CMD_RECV_REAL_HASH, result);
     });
 
     const connectPeer = (userId) => {
@@ -79,7 +95,7 @@ const start = (
         if (typeof msg === "object" && msg.cmd) {
           const { cmd, data } = msg;
           try {
-            peerCMD.receiveCMD(cmd, data, conn);
+            peerCMD.receiveCMD(cmd, data, peer);
             // if (cmd === CMD_REQUEST_FULLBLOCK && data) {
             //   const newBlock =
             //     blockchain.minePendingTransactions("test addr");
@@ -100,9 +116,10 @@ const start = (
 
       return conn;
     };
-    socket.on("user-list", (_users) => {
-      console.log("on user-list");
-      const users = JSON.parse(_users);
+    socket.on("user-list", ({ users, beforeHash: currentBlockHashKey }) => {
+      console.log("on user-list", users, currentBlockHashKey);
+      peerCMD.currentBlockHashKey = currentBlockHashKey;
+
       console.log("current users", users);
       peerCnt = users.length;
 
@@ -134,7 +151,7 @@ const start = (
       if (typeof msg === "object" && msg.cmd) {
         const { cmd, data } = msg;
         try {
-          peerCMD.receiveCMD(cmd, data, conn);
+          peerCMD.receiveCMD(cmd, data, peer);
         } catch (e) {
           console.error("onPeerCMDException", e);
         }
@@ -151,7 +168,7 @@ process.on("uncaughtException", function (err) {
   console.error("uncaughtException (Node is alive)", err);
 });
 
-if (process.argv.indexOf("-start")) {
+if (process.argv.indexOf("-start") !== -1) {
   start();
 }
 

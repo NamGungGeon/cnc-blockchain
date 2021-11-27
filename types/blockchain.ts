@@ -1,44 +1,25 @@
 import Block from "./block";
 import Transaction from "./transaction";
-import axios from "axios";
 
 const wallets = require("../wallets");
 
 export default class Blockchain {
-  chain: Array<Block> = [];
+  chain: Array<Block> = [this.createGenesisBlock()];
   difficulty: number = 2;
   pendingTransactions: Array<Transaction> = [];
   miningReward = 100;
 
-  attachNewBlock(block: Block) {
+  async attachNewBlock(block: Block) {
     //check block transactions are valid
     if (this.getLatestBlock().hash !== block.prevHash) {
       throw "이전 블록의 해시값과 현재 블록의 prevHash가 일치하지 않습니다";
     }
 
-    let exception = null;
+    if (!block.hasValidTransactions()) {
+      throw "유효하지 않은 트랜잭션이 포함되어 있습니다";
+    }
     block.transactions.map((tx: Transaction, idx: number) => {
       const { fromAddr, toAddr, amount, nft } = tx;
-      if (idx === 0) {
-        if (fromAddr !== null && amount !== this.miningReward) {
-          exception = "채굴 보상 정보가 무효합니다";
-        }
-        return;
-      }
-      if (!fromAddr || !toAddr) {
-        throw "보내는 사람 정보와 받는 사람 정보가 모두 존재해야 합니다";
-      }
-
-      if (
-        block.transactions.find((itx: Transaction, iidx: number) => {
-          return idx !== iidx && itx.fromAddr === tx.fromAddr;
-        })
-      ) {
-        throw "한 블록에 한 사람이 여러 번 거래를 등록할 수 없습니다";
-      }
-      //tx 서명 검사
-      tx.isValid();
-
       //nft 소유권 검사
       if (nft) {
         const owner = this.findNFTOwner(nft);
@@ -53,8 +34,8 @@ export default class Blockchain {
         }
       }
       //잔고 검사
-      if (amount) {
-        if (this.getBalanceOfAddress(fromAddr) - amount < 0) {
+      if (fromAddr && amount) {
+        if (this.getBalanceOfAddress(fromAddr as string) > amount) {
           throw "잔액보다 더 많이 보낼 수 없습니다";
         }
       }
@@ -62,6 +43,15 @@ export default class Blockchain {
 
     //ok
     this.chain.push(block);
+    //중복 ptx 제거
+    this.pendingTransactions = this.pendingTransactions.filter((ptx) => {
+      const ptxHash = ptx.calcHash();
+      const ptxInBlock = block.transactions.find(
+        (tx) => tx.calcHash() === ptxHash
+      );
+      //현재 ptx가 블록에 포함된 tx일 경우 해당 ptx삭제
+      return !ptxInBlock;
+    });
   }
 
   findAllNFT(walletAddr: string): Array<string> {
@@ -157,10 +147,7 @@ export default class Blockchain {
     });
   }
 
-  async addTransaction(transaction: Transaction): Promise<any> {
-    if (!transaction.toAddr || !transaction.fromAddr) {
-      throw "보내는 사람 정보와 받는 사람 정보가 모두 존재해야 합니다";
-    }
+  addTransaction(transaction: Transaction): void {
     if (!transaction.isValid()) {
       throw "무효한 트랜잭션입니다";
     }
@@ -181,32 +168,14 @@ export default class Blockchain {
         throw "해당 토큰의 소유자가 아닙니다";
       }
 
-      await axios
-        .request({
-          url: `http://3.37.53.134:3004/files/${transaction.nft}`,
-          method: "GET",
-        })
-        .catch((e: Error) => {
-          console.error(e);
-          throw "서버에 해당 NFT에 해당하는 파일이 없습니다";
-        });
-
       //보내는 데이터가 있는 경우 해당 데이터에서 계산된 수수료를 amount로 지정
       transaction.amount = transaction.calcFee();
     }
 
-    //pendingTranscation에 포함된 거래내역에 대해 잔액 변동률 계산
-    // let balanceDeltaFromPendingTransactions = 0;
-    // this.pendingTransactions.map((tx) => {
-    //   if (tx.fromAddr === transaction.fromAddr) {
-    //     balanceDeltaFromPendingTransactions -= tx.amount;
-    //   } else if (tx.toAddr === transaction.fromAddr) {
-    //     balanceDeltaFromPendingTransactions += tx.amount;
-    //   }
-    // });
     if (
-      this.getBalanceOfAddress(transaction.fromAddr) - transaction.amount <
-      0
+      transaction.fromAddr &&
+      this.getBalanceOfAddress(transaction.fromAddr as string) <
+        transaction.amount
     ) {
       throw "잔액보다 더 많이 보낼 수 없습니다";
     }
@@ -241,21 +210,21 @@ export default class Blockchain {
   }
 
   isValid(): boolean {
-    //제네시스 블록은 이전 블록이 없어 검사를 건너뛰기 위해 1부터 시작한다.
+    if (this.chain.length < 1) {
+      //체인의 길이는 반드시 1 이상이다
+      return false;
+    }
+
+    if (this.chain[0].calcHash() !== this.createGenesisBlock().hash) {
+      //제네시스 블록이 올바르지 않음
+      return false;
+    }
+
     for (let i = 1; i < this.chain.length; i++) {
       const currentBlock = this.chain[i];
-      const prevHash = this.chain[i - 1].hash;
+      const prevBlock = this.chain[i - 1];
 
-      //블록에 포함된 모든 트랜잭션이 유효한지도 검사
-      if (!currentBlock.hasValidTransactions()) {
-        return false;
-      }
-
-      if (currentBlock.prevHash !== prevHash) {
-        //현재 블록의 이전 해시값이 일치하지 않음
-        return false;
-      } else if (currentBlock.calcHash() !== currentBlock.hash) {
-        //현재 블록에 저장된 해시값과 다시 계산한 해시값이 일치하지 않음
+      if (!currentBlock.isValid(prevBlock, this.difficulty)) {
         return false;
       }
     }
